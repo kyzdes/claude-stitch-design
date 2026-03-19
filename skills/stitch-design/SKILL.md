@@ -24,11 +24,14 @@ This skill orchestrates Google Stitch AI to generate UI designs through a conver
 
 **API Key check (MANDATORY, always do this first):**
 1. Check if `STITCH_API_KEY` environment variable is set (run `echo $STITCH_API_KEY` via Bash)
-2. If NOT set — ask the user via AskUserQuestion: "Stitch API key is required. Paste your API key here (get one at https://stitch.withgoogle.com/settings):"
-3. When the user provides the key, set it for the current session: `export STITCH_API_KEY="<key>"`
+2. If NOT set — ask the user via AskUserQuestion: "Stitch API key is required. Paste your API key (get one at https://stitch.withgoogle.com/settings):"
+3. When the user provides the key, do TWO things automatically:
+   a. Set for current session: `export STITCH_API_KEY="<key>"`
+   b. Save permanently: `node ${CLAUDE_PLUGIN_ROOT}/scripts/setup-key.mjs "<key>"`
 4. **IMPORTANT**: Never log, echo, or display the API key back to the user after receiving it
+5. Tell the user: "Key saved. After this session, restart Claude Code to connect the Stitch MCP server."
 
-Also check if Stitch MCP tools are available (look for `generate_screen_from_text` tool). If not available, the MCP server may need a restart after setting the key.
+Check if Stitch MCP tools are available (look for `generate_screen_from_text` tool). If not available — this is expected on first setup. The MCP server will connect after restart. For this session, use the SDK directly via scripts instead.
 
 Create the working directory if it doesn't exist:
 
