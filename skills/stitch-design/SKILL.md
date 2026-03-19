@@ -84,6 +84,7 @@ Ask the user using AskUserQuestion for the following parameters. Provide sensibl
 - **Style direction**: minimalist / corporate / bold-vibrant / playful / dark / etc.
 
 **Optional (suggest defaults):**
+- **Model**: GEMINI_3_PRO (better quality, slower) / GEMINI_3_FLASH (faster, less detailed). Default: GEMINI_3_PRO
 - **Number of variants**: 1-5 (recommend 3 for exploration, 1 for quick iteration)
 - **Creative range**: REFINE (minimal changes) / EXPLORE (moderate variations, recommended) / REIMAGINE (radical alternatives)
 - **Variant aspects** (what to vary): LAYOUT / COLOR_SCHEME / IMAGES / TEXT_FONT / TEXT_CONTENT
@@ -140,7 +141,7 @@ Tell the user: **"Generating design (~1 min)..."**
 
 **For text-based generation:**
 ```
-generate_screen_from_text(projectId: "...", prompt: "...", deviceType: "DESKTOP")
+generate_screen_from_text(projectId: "...", prompt: "...", deviceType: "DESKTOP", modelId: "GEMINI_3_PRO")
 ```
 
 **For reference image:**
@@ -259,6 +260,8 @@ Every operation in this skill must be safe to repeat:
 ## Parameters Reference
 
 **DeviceType**: `MOBILE` | `DESKTOP` | `TABLET` | `AGNOSTIC`
+
+**ModelId**: `GEMINI_3_PRO` (quality, default) | `GEMINI_3_FLASH` (speed)
 
 **CreativeRange**: `REFINE` (subtle) | `EXPLORE` (moderate) | `REIMAGINE` (radical)
 
