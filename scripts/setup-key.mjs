@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Saves STITCH_API_KEY to ~/.claude/settings.json under env.
- * Creates the env section if it doesn't exist.
+ * Saves STITCH_API_KEY to shell profile (~/.zshrc) so it's available
+ * as an environment variable when Claude Code starts.
  *
  * Usage: node scripts/setup-key.mjs <api-key>
  *        node scripts/setup-key.mjs --remove
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const settingsPath = join(homedir(), ".claude", "settings.json");
 const key = process.argv[2];
 
 if (!key) {
@@ -20,23 +19,31 @@ if (!key) {
   process.exit(1);
 }
 
-let settings = {};
-if (existsSync(settingsPath)) {
-  settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
-}
+// Detect shell profile
+const zshrc = join(homedir(), ".zshrc");
+const bashrc = join(homedir(), ".bashrc");
+const profilePath = existsSync(zshrc) ? zshrc : bashrc;
+const marker = "# stitch-design-plugin";
 
 if (key === "--remove") {
-  if (settings.env) {
-    delete settings.env.STITCH_API_KEY;
-    if (Object.keys(settings.env).length === 0) {
-      delete settings.env;
-    }
+  // Remove from shell profile
+  if (existsSync(profilePath)) {
+    const lines = readFileSync(profilePath, "utf-8").split("\n");
+    const filtered = lines.filter(
+      (line) => !line.includes("STITCH_API_KEY") || !line.includes(marker)
+    );
+    writeFileSync(profilePath, filtered.join("\n"));
   }
-  writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   console.log("REMOVED");
 } else {
-  if (!settings.env) settings.env = {};
-  settings.env.STITCH_API_KEY = key;
-  writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+  // Remove old entry if exists, then add new one
+  if (existsSync(profilePath)) {
+    const lines = readFileSync(profilePath, "utf-8").split("\n");
+    const filtered = lines.filter(
+      (line) => !line.includes("STITCH_API_KEY") || !line.includes(marker)
+    );
+    writeFileSync(profilePath, filtered.join("\n"));
+  }
+  appendFileSync(profilePath, `\nexport STITCH_API_KEY="${key}" ${marker}\n`);
   console.log("SAVED");
 }
