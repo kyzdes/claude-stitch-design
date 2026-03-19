@@ -1,8 +1,6 @@
 ---
 name: stitch-theme
-description: "Extract design theme from a Stitch-generated HTML file. Use when the user asks to extract Tailwind config, fonts, icons, design tokens from a generated design — e.g., 'extract theme', 'give me Tailwind config', 'what fonts are used', 'извлеки тему', 'дай tailwind конфиг'."
-metadata:
-  mcp-server: stitch
+description: Extract design theme from a Stitch-generated HTML file. Use when user asks to extract Tailwind config, fonts, icons, or design tokens from a generated design.
 ---
 
 # Extract Stitch Theme

@@ -1,8 +1,6 @@
 ---
 name: stitch-edit
-description: "Edit an existing Stitch UI design. Use when the user asks to modify, change, update, or refine an existing screen design — e.g., 'change the header', 'add a sidebar', 'make it darker', 'move the button', 'измени дизайн', 'отредактируй экран'. Requires an active Stitch project context."
-metadata:
-  mcp-server: stitch
+description: Edit an existing Stitch UI design. Use when user asks to modify, change, update, or refine an existing screen design such as changing headers, adding sidebars, or adjusting colors.
 ---
 
 # Edit Stitch Design

@@ -1,9 +1,7 @@
 ---
 name: stitch-design
-description: "Generate UI designs with Google Stitch AI. Use when the user asks to create UI, design a page, prototype an interface, generate a screen, make a mockup, mentions 'stitch', 'дизайн', 'прототип', 'интерфейс', 'макет', 'экран', or wants AI-generated HTML/Tailwind UI from a text description. Provides a conversational brainstorm-first workflow."
+description: Generate UI designs with Google Stitch AI. Use when user asks to create UI, design a page, prototype an interface, generate a screen, make a mockup, or mentions stitch or design prototyping. Conversational brainstorm-first workflow.
 argument-hint: <description or command>
-metadata:
-  mcp-server: stitch
 ---
 
 # Stitch Design — Conversational UI Generation

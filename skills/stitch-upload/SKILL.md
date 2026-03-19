@@ -1,8 +1,6 @@
 ---
 name: stitch-upload
-description: "Upload a wireframe, screenshot, or sketch to Google Stitch for digitization into a clean UI. Use when the user provides an image file and asks to convert it to UI, digitize a sketch, recreate from screenshot — e.g., 'turn this wireframe into UI', 'digitize this sketch', 'recreate this screenshot', 'вот скриншот, сделай UI'."
-metadata:
-  mcp-server: stitch
+description: Upload a wireframe, screenshot, or sketch to Google Stitch for digitization into a clean UI. Use when user provides an image file and asks to convert it to UI or digitize a sketch.
 ---
 
 # Upload to Stitch
