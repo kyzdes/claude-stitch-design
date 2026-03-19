@@ -1,0 +1,8 @@
+{
+  "name": "stitch-design",
+  "description": "Google Stitch AI UI generation — brainstorm, generate, edit, iterate on UI designs from text prompts. Produces HTML with Tailwind CSS and PNG screenshots.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Viacheslav Kuznetsov"
+  }
+}
