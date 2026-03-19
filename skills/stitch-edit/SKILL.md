@@ -20,9 +20,11 @@ Iteratively edit an existing Stitch screen. Each edit creates a **new** screen �
 ### Step 1: Identify the Screen
 
 Determine which screen to edit:
-- If the user just generated a screen in this session → use that screen ID
+- If the user just generated a screen in this session → use that screen ID and project ID
 - If the user specifies a screen ID → use it
 - If unclear → read `./stitch-design/context-map.md` and ask which screen to edit
+
+Always use the **existing project ID** from context-map.md. Never create a new project for edits.
 
 ### Step 2: Compose Edit Prompt
 
@@ -32,7 +34,9 @@ Take the user's description of changes and compose a clear edit prompt. Be speci
 
 If the user is vague, help them be specific: "What exactly would you like to change? Color, layout, adding elements, removing elements?"
 
-### Step 3: Execute Edit
+### Step 3: Execute Edit (Fire-and-Poll Protocol)
+
+Tell the user: **"Applying changes (~1 min)..."**
 
 ```
 edit_screens(projectId: "...", screenIds: ["<screenId>"], prompt: "<edit prompt>", deviceType: "DESKTOP")
@@ -40,26 +44,44 @@ edit_screens(projectId: "...", screenIds: ["<screenId>"], prompt: "<edit prompt>
 
 **Important**: This creates a NEW screen. The original screen is preserved.
 
+**If the call succeeds** → proceed to Step 4.
+
+**If ECONNRESET / timeout / fetch failed:**
+1. Tell user: "Connection reset — checking if edit completed server-side..."
+2. Wait 90 seconds
+3. Call `list_screens(projectId)` — look for a new screen that wasn't there before
+4. If new screen found → proceed to Step 4
+5. If not found → wait 60 more seconds, poll again
+6. If found → Step 4
+7. If not found → "Edit didn't complete. Retry? (attempt X/2)"
+8. **Max 2 retries. Always use the same projectId.**
+
 ### Step 4: Download & Display
 
-Download the new screen's HTML and PNG:
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<html-url>" "./stitch-output/<project>/<newScreenId>/index.html"
-node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<image-url>" "./stitch-output/<project>/<newScreenId>/preview.png"
+Use human-readable paths:
 ```
+./stitch-output/{project-slug}/{screen-slug}-edit-N/index.html
+./stitch-output/{project-slug}/{screen-slug}-edit-N/preview.png
+```
+
+Download artifacts:
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<html-url>" "./stitch-output/{project-slug}/{screen-slug}-edit-N/index.html"
+node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<image-url>" "./stitch-output/{project-slug}/{screen-slug}-edit-N/preview.png"
+```
+
+**Inline preview**: Read the PNG file via Read tool — displays the image inline in chat.
 
 Open in browser:
 ```bash
-open ./stitch-output/<project>/<newScreenId>/index.html
+open ./stitch-output/{project-slug}/{screen-slug}-edit-N/index.html
 ```
 
-### Step 5: Update Tracking
+### Step 5: Update Tracking (MANDATORY — do not skip)
 
-Update `./stitch-design/context-map.md` — add the new screen with parent reference to the original.
-
-Update `./stitch-design/prompts.md` — log the edit prompt.
-
-Update `./stitch-design/usage.json` — increment edit counter for today.
+1. **context-map.md** — add the new screen entry with parent reference to the original (upsert by screen ID)
+2. **prompts.md** — log the edit prompt with timestamp
+3. **usage.json** — increment edit counter for today
 
 ### Step 6: Offer Next Steps
 
@@ -69,8 +91,8 @@ Update `./stitch-design/usage.json` — increment edit counter for today.
 
 ## Error Handling
 
-| Error | Action |
-|-------|--------|
-| Screen not found | Check context-map.md, ask user for correct screen ID |
-| Edit fails | Simplify the prompt, try again |
-| RATE_LIMITED | Inform user, update usage.json |
+**ECONNRESET / timeout**: Use fire-and-poll protocol (Step 3). The edit usually completes server-side.
+
+**All MCP calls failing**: Ask user to check API key and restart Claude Code. Do not attempt workarounds.
+
+**Max retries**: 2 per edit operation.

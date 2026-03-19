@@ -20,7 +20,7 @@ This skill orchestrates Google Stitch AI to generate UI designs through a conver
 
 **Follow these steps in order. Do not skip steps.**
 
-### Step 0: Initialize Workspace & API Key
+### Step 0: Initialize Workspace, API Key & Project
 
 **API Key check (MANDATORY, always do this first):**
 1. Check if `STITCH_API_KEY` environment variable is set (run `echo $STITCH_API_KEY` via Bash)
@@ -30,19 +30,24 @@ This skill orchestrates Google Stitch AI to generate UI designs through a conver
    b. Set for current session: `export STITCH_API_KEY="<key>"`
    c. Source profile to apply: `source ~/.zshrc`
 4. **IMPORTANT**: Never log, echo, or display the API key back to the user after receiving it
-5. Tell the user: "Key saved to ~/.zshrc. MCP server will connect on next session start. For now, I'll work with the SDK directly."
+5. Tell the user: "Key saved to ~/.zshrc. MCP server will connect on next session start."
 
-Check if Stitch MCP tools are available (look for `generate_screen_from_text` tool). If MCP tools are available — use them directly. If not — this is normal on first setup before restart. Use `callTool` via scripts or direct API calls as fallback for this session.
-
-Create the working directory if it doesn't exist:
-
+**Workspace init:**
 ```bash
 mkdir -p ./stitch-design/references
 ```
 
-Check if `./stitch-design/context-map.md` exists — if yes, read it to understand prior work in this project. Resume from where the user left off if applicable.
+**Project management (critical — prevents duplicate projects):**
+1. Read `./stitch-design/context-map.md` — if it exists, extract the active project ID
+2. **Health-check**: call `list_projects` (fast read-only call)
+   - If this call fails → warn user about MCP connection problem, do NOT proceed to generation
+   - If succeeds → connection is good, continue
+3. If context-map has an active project ID → **reuse it, NEVER create a new project**
+4. If no active project → you will create one in Step 4, but not yet
 
-Check if `./stitch-design/usage.json` exists — if yes, read it for today's credit usage.
+**RULE: Never create a new project when retrying or re-generating. Always reuse the project ID from context-map.md.**
+
+Read `./stitch-design/usage.json` if it exists — check today's credit usage.
 
 ### Step 1: Brainstorm & References (Optional)
 
@@ -113,82 +118,111 @@ Save the prompt to `./stitch-design/prompts.md` with a timestamp:
 
 ### Step 4: Generate & Display
 
-**Before generating**, check credit usage:
+#### 4.1 Credit Check
+
 1. Read `./stitch-design/usage.json`
-2. If today's date has entries, show: "Credits used today: X/400. This generation will use ~Y credits. Continue?"
-3. If usage > 350, warn: "You're approaching the daily limit (X/400). Continue?"
+2. If today's date has entries, show: "Credits used today: X/400."
+3. If usage > 350, warn: "Approaching daily limit (X/400)."
 4. If usage >= 400, block: "Daily limit reached. Try again tomorrow."
 
-**Generate the design:**
+#### 4.2 Project Setup
 
-1. Create or reuse a Stitch project:
+1. If active project ID exists (from Step 0) → use it
+2. If no project → create one:
    ```
    create_project(title: "[descriptive project name]")
    ```
-   Or if continuing previous work, use existing project ID from `context-map.md`.
+   **IMMEDIATELY** write the project ID to `./stitch-design/context-map.md` BEFORE generating anything. This prevents duplicate projects on retry.
 
-2. **If user provided a reference image:**
-   ```
-   upload_screens_from_images(projectId: "...", images: [...])
-   ```
-   Then edit the uploaded screen with the composed prompt:
-   ```
-   edit_screens(projectId: "...", screenIds: ["..."], prompt: "...")
-   ```
+#### 4.3 Generation (Fire-and-Poll Protocol)
 
-3. **If generating from text (most common):**
+Tell the user: **"Generating design (~1 min)..."**
 
-   For a single screen:
-   ```
-   generate_screen_from_text(projectId: "...", prompt: "...", deviceType: "DESKTOP")
-   ```
+**For text-based generation:**
+```
+generate_screen_from_text(projectId: "...", prompt: "...", deviceType: "DESKTOP")
+```
 
-   For multiple variants:
-   ```
-   generate_screen_from_text(projectId: "...", prompt: "...", deviceType: "DESKTOP")
-   ```
-   Then:
-   ```
-   generate_variants(projectId: "...", screenIds: ["..."], prompt: "try different variations", variantCount: 3, creativeRange: "EXPLORE", aspects: ["COLOR_SCHEME", "LAYOUT"])
-   ```
+**For reference image:**
+```
+upload_screens_from_images(projectId: "...", images: [...])
+```
+Then optionally: `edit_screens(projectId: "...", screenIds: ["..."], prompt: "...")`
 
-4. **Download artifacts** for each screen:
-   - Get the screen data which includes HTML and image URLs
-   - Use the download script for each artifact:
-   ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<html-url>" "./stitch-output/<project>/<screenId>/index.html"
-   node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<image-url>" "./stitch-output/<project>/<screenId>/preview.png"
-   ```
+**For variants** (after initial screen exists):
+```
+generate_variants(projectId: "...", screenIds: ["..."], prompt: "...", variantCount: 3, creativeRange: "EXPLORE", aspects: ["COLOR_SCHEME", "LAYOUT"])
+```
 
-5. **Open in browser:**
-   ```bash
-   open ./stitch-output/<project>/<screenId>/index.html
-   ```
+**If the call succeeds** → proceed to 4.4 Download.
 
-6. **Update tracking files:**
+**If ECONNRESET / timeout / fetch failed:**
+1. Tell user: "Connection reset — checking if generation completed server-side..."
+2. Wait 90 seconds (use `sleep 90` via Bash)
+3. Call `list_screens(projectId)` — check for new screens
+4. If new screen found → proceed to 4.4 Download
+5. If not found → tell user: "Still processing, checking again..."
+6. Wait 60 more seconds, call `list_screens` again
+7. If found → proceed to 4.4 Download
+8. If not found → tell user: "Generation didn't complete. Retry? (attempt X/2)"
+9. **Max 2 retry attempts. ALWAYS use the same projectId.**
+10. After 2 failed retries → stop, report to user, suggest checking connection.
 
-   Update `./stitch-design/context-map.md`:
+#### 4.4 Download Artifacts
+
+Use human-readable paths derived from project title and screen context:
+
+```
+./stitch-output/{project-slug}/{screen-slug}/index.html
+./stitch-output/{project-slug}/{screen-slug}/preview.png
+```
+
+Slug rules:
+- Project title "Mentoring Booking" → `mentoring-booking`
+- Screen context "calendar view" → `calendar-view`
+- Edits: `{screen-slug}-edit-1/`, `-edit-2/`, etc.
+- Variants: `{screen-slug}-variant-1/`, `-variant-2/`, etc.
+
+Download each artifact:
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<html-url>" "./stitch-output/{project-slug}/{screen-slug}/index.html"
+node ${CLAUDE_PLUGIN_ROOT}/scripts/download.mjs "<image-url>" "./stitch-output/{project-slug}/{screen-slug}/preview.png"
+```
+
+Open in browser:
+```bash
+open ./stitch-output/{project-slug}/{screen-slug}/index.html
+```
+
+#### 4.5 Post-Generation (MANDATORY — do not skip any of these)
+
+1. **Inline preview**: Read the downloaded PNG file using the Read tool — it displays the image inline in the chat. The user sees the result without switching to a browser.
+
+2. **Update context-map.md** (upsert — do not duplicate entries):
    ```markdown
    ## Project: [name]
    - Project ID: `...`
    - Created: [date]
 
    ### Screens
-   | Screen ID | Type | Prompt | Files | Parent |
-   |-----------|------|--------|-------|--------|
-   | abc123 | generated | "analytics dashboard..." | stitch-output/.../index.html | — |
-   | def456 | variant-1 | color_scheme variation | stitch-output/.../index.html | abc123 |
+   | Screen ID | Type | Description | Files | Parent |
+   |-----------|------|-------------|-------|--------|
+   | abc123 | generated | analytics dashboard | stitch-output/.../index.html | — |
+   | def456 | variant-1 | color variation | stitch-output/.../index.html | abc123 |
    ```
 
-   Update `./stitch-design/usage.json`:
+3. **Update prompts.md** — append the sent prompt with timestamp and parameters.
+
+4. **Update usage.json** — increment the counter for today:
    ```json
    { "daily": { "YYYY-MM-DD": { "generations": N, "edits": N, "variants": N, "total": N } }, "limits": { "daily_bonuses": 400, "daily_redesign": 15 } }
    ```
 
-7. **Present results** to the user:
-   - List all generated files with paths
-   - Brief description of each variant (if multiple)
-   - Ask: "Which variant do you like? Want to refine anything?"
+5. **Show structured result to user:**
+   - Inline preview image (already shown in step 1)
+   - File paths
+   - Brief description: what's on the screen
+   - Next steps: "Refine? More variants? Extract theme?"
 
 ### Step 5: Iterate
 
@@ -199,27 +233,28 @@ After showing results, offer next actions:
 - **New screen**: "Now design the settings page in the same style" → back to Step 3 with style context preserved
 - **Apply design system**: For consistent styling across multiple screens → use `create_design_system` + `apply_design_system`
 
-Each iteration:
-- Updates `prompts.md` with the new prompt
-- Updates `context-map.md` with new screen entries and parent relationships
-- Updates `usage.json` with credit usage
-- Downloads new artifacts and opens in browser
+Each iteration follows the same fire-and-poll protocol (4.3) and mandatory post-generation steps (4.5).
 
-## MCP Tools Reference (Quick)
+## Idempotency Rules
+
+Every operation in this skill must be safe to repeat:
+- `create_project` when active project exists → skip, return existing ID
+- `download` when file exists → overwrite silently (no error)
+- `context-map.md` writes → upsert by screen ID, never create duplicate entries
+- `usage.json` writes → increment, not overwrite
+
+## MCP Tools Reference
 
 | Tool | Use For |
 |------|---------|
 | `create_project` | Start a new design project |
-| `list_projects` | Find existing projects |
+| `list_projects` | Find existing projects / health-check |
 | `generate_screen_from_text` | Generate screen from text prompt |
 | `generate_variants` | Create N variations of existing screen |
 | `edit_screens` | Modify existing screen (creates new, preserves original) |
 | `upload_screens_from_images` | Upload wireframe/screenshot as starting point |
 | `get_screen` | Get screen data (HTML/image URLs) |
-| `list_screens` | List all screens in a project |
-| `create_design_system` | Create a reusable design system |
-| `apply_design_system` | Apply design system to screens |
-| `list_design_systems` | List available design systems |
+| `list_screens` | List screens in project / poll for completed generation |
 
 ## Parameters Reference
 
@@ -228,6 +263,22 @@ Each iteration:
 **CreativeRange**: `REFINE` (subtle) | `EXPLORE` (moderate) | `REIMAGINE` (radical)
 
 **VariantAspect**: `LAYOUT` | `COLOR_SCHEME` | `IMAGES` | `TEXT_FONT` | `TEXT_CONTENT`
+
+## Error Handling
+
+**ECONNRESET / timeout / fetch failed during generation:**
+→ Use fire-and-poll protocol (Step 4.3). The generation usually completes server-side despite the connection reset.
+
+**All MCP calls failing (including fast ones like list_projects):**
+1. Ask user to verify STITCH_API_KEY is set correctly
+2. Suggest restarting Claude Code session
+3. DO NOT attempt workarounds via curl, SDK scripts, or inline code — these are dead ends
+
+**Max retries**: 2 for any generation/edit/variant operation. After 2 failures → stop and report.
+
+## Known Issues
+
+`generate_screen_from_text`, `edit_screens`, and `generate_variants` may timeout via the MCP proxy with ECONNRESET after ~60 seconds. This is a transport-layer limitation of the stdio proxy, not a Stitch API error. The generation almost always completes server-side despite the connection reset. The fire-and-poll protocol in Step 4.3 handles this by checking `list_screens` after a timeout to find the completed result.
 
 ## Examples
 
@@ -240,7 +291,7 @@ User: `/stitch-design`
 3. Brainstorm: discuss key screens, audience, style preferences
 4. Save requirements, collect parameters (MOBILE, playful, 3 variants, EXPLORE)
 5. Compose prompt, show for approval
-6. Generate 3 variants, download, open in browser
+6. Generate 3 variants, download, show inline preview
 7. User picks favorite, asks for edit → iterate
 
 ### Example 2: Quick generation with reference
@@ -251,7 +302,7 @@ User: `/stitch-design dark dashboard like Linear [attaches screenshot]`
 2. Confirm: DESKTOP, minimalist/dark, 3 variants?
 3. Upload reference image to Stitch
 4. Compose prompt incorporating Linear-style description
-5. Generate, download, open in browser
+5. Generate, download, show inline preview
 
 ### Example 3: Continuing previous work
 
@@ -260,24 +311,4 @@ User: `/stitch-design` (in a project with existing stitch-design/ folder)
 1. Read context-map.md → "I see you have 3 screens from yesterday's dashboard project. Want to continue working on it or start something new?"
 2. User: "Add a settings page matching the same style"
 3. Use existing project ID, reference the style from previous screens
-4. Generate, iterate
-
-## Error Handling
-
-| Error | Action |
-|-------|--------|
-| `AUTH_FAILED` | Ask the user to provide the API key again — it may be invalid or expired |
-| `RATE_LIMITED` | "Daily limit reached. Credits reset tomorrow." Update usage.json. |
-| `NETWORK_ERROR` | Retry once after 5 seconds. If still failing, report to user. |
-| `VALIDATION_ERROR` | Simplify the prompt (too long or contains unsupported content) |
-| MCP tools not found | Ask user for API key, set it via export, suggest restarting Claude Code if MCP still unavailable |
-| Download script fails | Check URL validity, try re-fetching screen data with `get_screen` |
-
-## Important Notes
-
-- Stitch generates **self-contained HTML** with inline Tailwind CSS — no build step needed, opens directly in browser
-- Each `edit_screens` call creates a **new** screen — the original is never modified
-- `generate_variants` consumes 1 credit per variant (3 variants = 3 credits)
-- Generation can take up to 60 seconds — inform the user it's working
-- HTML includes Google Fonts links and Material Symbols — requires internet to render correctly
-- All prompts are in the language the user speaks — Stitch handles both English and Russian well
+4. Generate, show inline preview, iterate
