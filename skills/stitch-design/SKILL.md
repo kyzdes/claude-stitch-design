@@ -68,10 +68,10 @@ Determine the user's intent from their input:
 - Skip immediately to Step 2
 
 **References** — the user may provide:
-- **Image file** (screenshot, wireframe, sketch) → save to `./stitch-design/references/`, use in Step 4 via `upload_screens_from_images`
 - **URL** → analyze the site (describe the style, layout, key patterns)
 - **HTML code** (e.g., from a previous Stitch variant) → analyze the style
 - **Text description** ("like Linear", "Notion-style") → incorporate into the prompt
+- **Image file** — note: Stitch's MCP API does not currently expose image upload. Describe the image in text and feed that into the prompt.
 
 Note all references in `./stitch-design/design-requirements.md`.
 
@@ -144,15 +144,14 @@ Tell the user: **"Generating design (~1 min)..."**
 generate_screen_from_text(projectId: "...", prompt: "...", deviceType: "DESKTOP", modelId: "GEMINI_3_PRO")
 ```
 
-**For reference image:**
-```
-upload_screens_from_images(projectId: "...", images: [...])
-```
-Then optionally: `edit_screens(projectId: "...", screenIds: ["..."], prompt: "...")`
-
 **For variants** (after initial screen exists):
 ```
-generate_variants(projectId: "...", screenIds: ["..."], prompt: "...", variantCount: 3, creativeRange: "EXPLORE", aspects: ["COLOR_SCHEME", "LAYOUT"])
+generate_variants(
+  projectId: "...",
+  selectedScreenIds: ["..."],
+  prompt: "...",
+  variantOptions: { variantCount: 3, creativeRange: "EXPLORE", aspects: ["COLOR_SCHEME", "LAYOUT"] }
+)
 ```
 
 **If the call succeeds** → proceed to 4.4 Download.
@@ -253,9 +252,9 @@ Every operation in this skill must be safe to repeat:
 | `generate_screen_from_text` | Generate screen from text prompt |
 | `generate_variants` | Create N variations of existing screen |
 | `edit_screens` | Modify existing screen (creates new, preserves original) |
-| `upload_screens_from_images` | Upload wireframe/screenshot as starting point |
 | `get_screen` | Get screen data (HTML/image URLs) |
 | `list_screens` | List screens in project / poll for completed generation |
+| `create_design_system` / `update_design_system` / `list_design_systems` / `apply_design_system` | Define and apply a shared design system across screens |
 
 ## Parameters Reference
 

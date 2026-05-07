@@ -41,17 +41,6 @@ That's it. The MCP server connects automatically on next session start.
 
 Claude brainstorms details, composes an optimized prompt, generates the design, downloads HTML + PNG, and shows an inline preview — all in one conversation.
 
-### Upload a wireframe and digitize it
-
-```
-> /stitch-upload
-
-> Here's my hand-drawn wireframe [attaches sketch.png].
-  Turn it into a clean Material Design interface, mobile layout.
-```
-
-Stitch interprets the sketch and produces a polished HTML screen.
-
 ### Edit an existing screen
 
 ```
@@ -84,7 +73,6 @@ Extracts Tailwind config, Google Fonts imports, and Material Symbols icon list f
 |---|---|
 | `stitch-design` | Full conversational flow: brainstorm, generate, iterate |
 | `stitch-edit` | Edit an existing screen with a follow-up prompt |
-| `stitch-upload` | Upload a wireframe/screenshot for AI digitization |
 | `stitch-theme` | Extract Tailwind config, fonts, and icons from a design |
 | `/stitch-setup` | Configure or update the API key |
 | `/stitch-reset` | Remove API key and/or clean project files |
@@ -144,7 +132,6 @@ stitch-design/
   skills/
     stitch-design/SKILL.md  # Main skill: brainstorm -> generate -> iterate
     stitch-edit/SKILL.md    # Screen editing
-    stitch-upload/SKILL.md  # Image upload & digitization
     stitch-theme/SKILL.md   # Theme extraction
   commands/
     stitch-setup.md         # /stitch-setup command
@@ -174,7 +161,7 @@ stitch-design/
 ## Credits
 
 - [Google Stitch](https://stitch.withgoogle.com) — AI UI generation engine
-- [`@google/stitch-sdk`](https://www.npmjs.com/package/@google/stitch-sdk) (v0.0.3) — official SDK, Apache 2.0
+- [`@google/stitch-sdk`](https://www.npmjs.com/package/@google/stitch-sdk) (v0.2.0) — official SDK, Apache 2.0
 
 ## License
 

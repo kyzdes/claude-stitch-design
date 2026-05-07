@@ -1,9 +1,11 @@
 {
-  "stitch": {
-    "command": "node",
-    "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/stitch-proxy.mjs"],
-    "env": {
-      "STITCH_API_KEY": "${STITCH_API_KEY}"
+  "mcpServers": {
+    "stitch": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/stitch-proxy.mjs"],
+      "env": {
+        "STITCH_API_KEY": "${STITCH_API_KEY}"
+      }
     }
   }
 }

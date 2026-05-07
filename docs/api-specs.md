@@ -14,7 +14,7 @@ Google Stitch — AI-сервис генерации UI-дизайнов. При
 | MCP Endpoint | `https://stitch.googleapis.com/mcp` |
 | Протокол | Streamable HTTP (MCP over HTTP) |
 | SDK пакет | `@google/stitch-sdk` |
-| SDK версия | `0.0.3` |
+| SDK версия | `0.2.0` |
 | npm | https://www.npmjs.com/package/@google/stitch-sdk |
 | GitHub | https://github.com/google-labs-code/stitch-sdk |
 | Документация | https://stitch.withgoogle.com/docs |
@@ -73,9 +73,9 @@ npm install @google/stitch-sdk ai @ai-sdk/google
 
 ---
 
-## 4. MCP Tools — полный список (14 инструментов)
+## 4. MCP Tools — полный список (12 инструментов в SDK 0.2.0)
 
-Все инструменты доступны через MCP-сервер и SDK.
+Все инструменты доступны через MCP-сервер и SDK. Источник правды — `dist/generated/src/tool-definitions.js` в установленном SDK.
 
 ### 4.1. Project Management
 
@@ -83,33 +83,35 @@ npm install @google/stitch-sdk ai @ai-sdk/google
 |---|------|----------|-----------|
 | 1 | `create_project` | Создать новый проект | Нет |
 | 2 | `get_project` | Получить проект по ID | Да |
-| 3 | `delete_project` | Удалить проект | Нет |
-| 4 | `list_projects` | Список всех доступных проектов | Да |
+| 3 | `list_projects` | Список всех доступных проектов | Да |
 
 ### 4.2. Screen Management
 
 | # | Tool | Описание | Read-Only |
 |---|------|----------|-----------|
-| 5 | `list_screens` | Список экранов в проекте | Да |
-| 6 | `get_screen` | Получить экран по ID | Да |
+| 4 | `list_screens` | Список экранов в проекте | Да |
+| 5 | `get_screen` | Получить экран по ID | Да |
 
 ### 4.3. AI Generation
 
 | # | Tool | Описание | Read-Only |
 |---|------|----------|-----------|
-| 7 | `generate_screen_from_text` | Генерация экрана из текстового промпта | Нет |
-| 8 | `upload_screens_from_images` | Создание экрана из загруженного изображения | Нет |
-| 9 | `edit_screens` | Итеративное редактирование экрана по промпту | Нет |
-| 10 | `generate_variants` | Генерация вариантов существующего экрана | Нет |
+| 6 | `generate_screen_from_text` | Генерация экрана из текстового промпта | Нет |
+| 7 | `edit_screens` | Итеративное редактирование экрана по промпту. Параметры: `projectId`, `selectedScreenIds: string[]`, `prompt`, `deviceType?`, `modelId?` | Нет |
+| 8 | `generate_variants` | Генерация вариантов экрана. Параметры: `projectId`, `selectedScreenIds: string[]`, `prompt`, `variantOptions: { variantCount, creativeRange, aspects[] }`, `deviceType?`, `modelId?` | Нет |
 
 ### 4.4. Design Systems
 
 | # | Tool | Описание | Read-Only |
 |---|------|----------|-----------|
-| 11 | `create_design_system` | Создать дизайн-систему | Нет |
-| 12 | `update_design_system` | Обновить дизайн-систему | Нет |
-| 13 | `list_design_systems` | Список дизайн-систем | Да |
-| 14 | `apply_design_system` | Применить дизайн-систему к экранам | Нет |
+| 9 | `create_design_system` | Создать дизайн-систему | Нет |
+| 10 | `update_design_system` | Обновить дизайн-систему | Нет |
+| 11 | `list_design_systems` | Список дизайн-систем | Да |
+| 12 | `apply_design_system` | Применить дизайн-систему к экранам | Нет |
+
+### 4.5. Загрузка изображений (НЕ через MCP)
+
+В Stitch нет MCP-инструмента для загрузки изображений. Метод `Project.uploadImage(filePath, opts)` есть в SDK, но он использует приватный REST-endpoint `projects/{id}/screens:batchCreate` через `StitchToolClient.httpPost()` и недоступен агентам через MCP-транспорт. Соответственно, скилл `stitch-upload` удалён — workflow с референс-изображениями описывается текстом и подаётся в `generate_screen_from_text`.
 
 ---
 

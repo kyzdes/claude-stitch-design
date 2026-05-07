@@ -39,7 +39,7 @@ If the user is vague, help them be specific: "What exactly would you like to cha
 Tell the user: **"Applying changes (~1 min)..."**
 
 ```
-edit_screens(projectId: "...", screenIds: ["<screenId>"], prompt: "<edit prompt>", deviceType: "DESKTOP")
+edit_screens(projectId: "...", selectedScreenIds: ["<screenId>"], prompt: "<edit prompt>", deviceType: "DESKTOP")
 ```
 
 **Important**: This creates a NEW screen. The original screen is preserved.
