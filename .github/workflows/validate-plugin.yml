@@ -1,0 +1,65 @@
+# Lightweight CI: verify the plugin manifest + every SKILL.md is well-formed.
+# Tech-lead note (2026-05-15): markdown-only plugins have no test suite, but a
+# typo in plugin.json or missing frontmatter would silently break installs for
+# friends. This guard catches such cases at push time.
+
+name: validate-plugin
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: plugin.json must be valid JSON with required `name`
+        run: |
+          python3 - <<'PY'
+          import json, sys, pathlib
+          p = pathlib.Path('.claude-plugin/plugin.json')
+          if not p.exists():
+              sys.exit(f"error: {p} not found")
+          try:
+              data = json.loads(p.read_text(encoding='utf-8'))
+          except json.JSONDecodeError as ex:
+              sys.exit(f"error: {p} is not valid JSON: {ex}")
+          if not data.get('name'):
+              sys.exit(f"error: {p} missing required `name` field")
+          print(f"ok: plugin.json valid (name={data['name']!r})")
+          PY
+
+      - name: every skills/*/SKILL.md must have name + description frontmatter
+        run: |
+          python3 - <<'PY'
+          import re, sys, pathlib
+          fm_re = re.compile(r'^---\n(.*?)\n---\n', re.DOTALL)
+          name_re = re.compile(r'^name:\s*\S', re.MULTILINE)
+          desc_re = re.compile(r'^description:\s*\S', re.MULTILINE)
+          skills = list(pathlib.Path('skills').glob('*/SKILL.md')) if pathlib.Path('skills').exists() else []
+          if not skills:
+              sys.exit("error: no skills/*/SKILL.md found")
+          failed = False
+          for s in skills:
+              text = s.read_text(encoding='utf-8')
+              m = fm_re.match(text)
+              if not m:
+                  print(f"error: {s} missing YAML frontmatter (---\\n...\\n---)")
+                  failed = True
+                  continue
+              fm = m.group(1)
+              if not name_re.search(fm):
+                  print(f"error: {s} frontmatter missing `name:`")
+                  failed = True
+              if not desc_re.search(fm):
+                  print(f"error: {s} frontmatter missing `description:`")
+                  failed = True
+              if not failed:
+                  print(f"ok: {s}")
+          if failed:
+              sys.exit(1)
+          PY
