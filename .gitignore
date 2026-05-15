@@ -3,3 +3,7 @@ stitch-output/
 /stitch-design/
 .env
 *.log
+
+# Local-only scratch / sibling projects (not part of the published plugin)
+stitch-web/
+mobile-setup-2026.html
