@@ -4,6 +4,10 @@ stitch-output/
 .env
 *.log
 
+# Node.js dependencies — must not be committed; SessionStart auto-update clones
+# would otherwise drag ~3500 files per install.
+node_modules/
+
 # Local-only scratch / sibling projects (not part of the published plugin)
 stitch-web/
 mobile-setup-2026.html
