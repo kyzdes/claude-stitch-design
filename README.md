@@ -179,3 +179,21 @@ stitch-design/
 ## License
 
 Apache 2.0
+
+## Plugin update policy
+
+When Claude's native auto-update is enabled for `claude-skills`, the host owns
+updates and this plugin's fallback updater does no work. Native auto-update is
+an independent user setting; hook environment flags do not disable it.
+
+With native auto-update off, the fallback hook updates **only this plugin**,
+in the background, at most once per four hours after a successful update.
+Updates share an OS lock, have bounded command timeouts, and retry failed work
+without starting a four-hour success cooldown. Set `KKZ_NO_AUTOUPDATE=1` to
+disable the fallback; `KKZ_AUTO_UPDATE_INTERVAL_SEC` sets its cooldown.
+Keys Keeper's fallback additionally requires `KEYS_KEEPER_ENABLE_MUTABLE_AUTOUPDATE=1`
+and respects `KEYS_KEEPER_NO_AUTOUPDATE`. It never updates another plugin.
+To prohibit every automatic update, disable native auto-update as well.
+Logs contain operation names and exit codes only, under
+`~/.cache/kyzdes-claude-skills/v2/<config-id>/`, isolated by Claude configuration.
+Python 3.9 or newer is required for the fallback.
